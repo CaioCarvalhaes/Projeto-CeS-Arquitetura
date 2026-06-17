@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h1 class="page-title">{{ 'Editar Custo' if edit_cost else 'Custos Operacionais' }}</h1>
+    <p class="page-subtitle">Controle mensal de custos fixos, variáveis e impostos da operação.</p>
+  </div>
+  <form class="filters-bar" method="get">
+    <div class="filter-box"><label>Competência</label><input class="form-control" type="month" name="month" value="{{ selected_month }}"></div>
+    <div class="filter-box"><label>Categoria</label><select class="form-select" name="category"><option value="">Todas</option>{% for item in COST_CATEGORIES %}<option value="{{ item }}" {% if selected_category==item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></div>
+    <div class="filter-box"><label>Tipo</label><select class="form-select" name="cost_type"><option value="">Todos</option>{% for item in COST_TYPES %}<option value="{{ item }}" {% if selected_cost_type==item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></div>
+    <button class="btn btn-primary">Filtrar</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('costs', month=selected_month) }}">Limpar</a>
+  </form>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card blue"><div class="metric-label">Custos fixos</div><div class="metric-value">{{ summary.fixed_total|brl }}</div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card purple"><div class="metric-label">Custos variáveis</div><div class="metric-value">{{ summary.variable_total|brl }}</div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card orange"><div class="metric-label">Impostos</div><div class="metric-value">{{ summary.tax_total|brl }}</div><div class="metric-subtitle">6% automático + impostos manuais</div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card green"><div class="metric-label">Custos manuais</div><div class="metric-value">{{ summary.manual_total|brl }}</div></div></div>
+</div>
+
+<div class="row g-4">
+  {% if can_manage_company_costs(g.user) %}
+  <div class="col-xl-4">
+    <div class="cs-card p-4">
+      <div class="section-title">{{ 'Atualizar custo' if edit_cost else 'Novo custo' }}</div>
+      <form method="post" class="vstack gap-3">
+        <input type="hidden" name="cost_id" value="{{ edit_cost.id if edit_cost else '' }}">
+        <div><label class="form-label">Descrição</label><input class="form-control" name="description" value="{{ edit_cost.description if edit_cost else '' }}" required></div>
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label">Categoria</label><select class="form-select" name="category">{% for item in COST_CATEGORIES %}<option value="{{ item }}" {% if edit_cost and edit_cost.category==item %}selected{% elif not edit_cost and item=='OUTROS' %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></div>
+          <div class="col-md-6"><label class="form-label">Tipo</label><select class="form-select" name="cost_type">{% for item in COST_TYPES %}<option value="{{ item }}" {% if edit_cost and edit_cost.cost_type==item %}selected{% elif not edit_cost and item=='FIXO' %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></div>
+          <div class="col-md-6"><label class="form-label">Valor</label><input class="form-control" name="value" value="{{ edit_cost.value if edit_cost else '' }}" required></div>
+          <div class="col-md-6"><label class="form-label">Competência</label><input class="form-control" type="month" name="competence_month" value="{{ edit_cost.competence_month if edit_cost else selected_month }}" required></div>
+        </div>
+        <div><label class="form-label">Observações</label><textarea class="form-control" rows="3" name="notes">{{ edit_cost.notes if edit_cost else '' }}</textarea></div>
+        {% if edit_cost %}<div class="form-check"><input class="form-check-input" type="checkbox" value="1" name="active" id="active" {% if edit_cost.active %}checked{% endif %}><label class="form-check-label" for="active">Custo ativo</label></div>{% endif %}
+        <div class="d-flex gap-2"><button class="btn btn-primary">Salvar</button>{% if edit_cost %}<a class="btn btn-outline-secondary" href="{{ url_for('costs', month=selected_month) }}">Cancelar</a>{% endif %}</div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="col-xl-{{ '8' if can_manage_company_costs(g.user) else '12' }}">
+    <div class="cs-card table-card">
+      <div class="p-4 pb-0">
+        <div class="section-title mb-0">Custos cadastrados</div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead><tr><th>Descrição</th><th>Categoria</th><th>Tipo</th><th>Competência</th><th>Valor</th><th>Status</th>{% if can_manage_company_costs(g.user) %}<th>Ações</th>{% endif %}</tr></thead>
+          <tbody>
+            {% for item in items %}
+            <tr>
+              <td><div class="fw-semibold">{{ item.description }}</div><div class="small text-muted">{{ item.notes or '-' }}</div></td>
+              <td>{{ item.category }}</td>
+              <td>{{ item.cost_type }}</td>
+              <td>{{ item.competence_month }}</td>
+              <td>{{ item.value|brl }}</td>
+              <td><span class="status-badge {{ 'badge-success' if item.active else 'badge-neutral' }}">{{ 'Ativo' if item.active else 'Inativo' }}</span></td>
+              {% if can_manage_company_costs(g.user) %}
+              <td><div class="action-stack"><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('costs', month=selected_month, edit=item.id, category=selected_category, cost_type=selected_cost_type) }}">Editar</a><form method="post" action="{{ url_for('cost_toggle_active', cost_id=item.id) }}"><button class="btn btn-outline-warning btn-sm">{{ 'Inativar' if item.active else 'Reativar' }}</button></form><form method="post" action="{{ url_for('cost_delete', cost_id=item.id) }}" onsubmit="return confirm('Excluir este custo?');"><button class="btn btn-outline-danger btn-sm">Excluir</button></form></div></td>
+              {% endif %}
+            </tr>
+            {% else %}
+            <tr><td colspan="{{ '7' if can_manage_company_costs(g.user) else '6' }}" class="list-empty">Nenhum custo encontrado para a competência selecionada.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if summary.category_totals %}
+    <div class="soft-card p-4 mt-4">
+      <div class="section-title">Totais por categoria</div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Imposto automático sobre projetos (6%)</span><strong>{{ summary.automatic_tax_total|brl }}</strong></div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Impostos manuais</span><strong>{{ summary.manual_tax_total|brl }}</strong></div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Total de impostos</span><strong>{{ summary.tax_total|brl }}</strong></div>
+      {% for row in summary.category_totals %}
+      <div class="d-flex justify-content-between py-2 {% if not loop.last %}border-bottom{% endif %}"><span>{{ row.label }}</span><strong>{{ row.total|brl }}</strong></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

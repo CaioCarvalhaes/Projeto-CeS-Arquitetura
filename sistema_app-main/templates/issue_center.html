@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% from 'macros.html' import status_badge %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h1 class="page-title">Central de Pendências</h1>
+    <p class="page-subtitle">Visão única de pendências, revisões, aprovações e checklist dos projetos visíveis para o seu usuário.</p>
+  </div>
+  <div class="action-stack">
+    <a class="btn btn-outline-secondary" href="{{ url_for('projects') }}">Projetos</a>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card blue"><div class="metric-label">Projetos com apontamentos</div><div class="metric-value">{{ summary.projects }}</div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card orange"><div class="metric-label">Com pendência</div><div class="metric-value">{{ summary.pending }}</div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card purple"><div class="metric-label">Em revisão</div><div class="metric-value">{{ summary.revision }}</div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card green"><div class="metric-label">Aguardando aprovação</div><div class="metric-value">{{ summary.approval }}</div><div class="metric-subtitle">{{ summary.critical }} item(ns) críticos</div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card red"><div class="metric-label">Com checklist pendente</div><div class="metric-value">{{ summary.checklist }}</div></div></div>
+</div>
+
+<div class="cs-card p-4 mb-4">
+  <form class="row g-3" method="get">
+    <div class="col-md-3"><label class="form-label">Busca</label><input class="form-control" name="search" value="{{ search }}" placeholder="Buscar projeto"></div>
+    <div class="col-md-2"><label class="form-label">Mês</label><input class="form-control" type="month" name="month" value="{{ selected_month }}"></div>
+    <div class="col-md-2"><label class="form-label">Escola</label><select class="form-select" name="school_id"><option value="">Todas</option>{% for s in schools %}<option value="{{ s.id }}" {% if selected_school_id==s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label">Disciplina</label><select class="form-select" name="discipline_id"><option value="">Todas</option>{% for d in disciplines %}<option value="{{ d.id }}" {% if selected_discipline_id==d.id %}selected{% endif %}>{{ d.name }}</option>{% endfor %}</select></div>
+    {% if users_list %}<div class="col-md-3"><label class="form-label">Responsável interno</label><select class="form-select" name="assigned_user_id"><option value="">Todos</option>{% for u in users_list %}<option value="{{ u.id }}" {% if selected_assigned_user_id==u.id %}selected{% endif %}>{{ u.name }}</option>{% endfor %}</select></div>{% endif %}
+    <div class="col-md-3"><label class="form-label">Status operacional</label><select class="form-select" name="operational_status"><option value="">Todos</option>{% for s in OPERATIONAL_STATUSES %}<option value="{{ s }}" {% if selected_operational_status==s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></div>
+    <div class="col-md-3"><label class="form-label">Tipo de apontamento</label><select class="form-select" name="issue_type"><option value="">Todos</option><option value="PENDENCIA" {% if selected_issue_type=='PENDENCIA' %}selected{% endif %}>Pendência</option><option value="REVISAO" {% if selected_issue_type=='REVISAO' %}selected{% endif %}>Revisão</option><option value="APROVACAO" {% if selected_issue_type=='APROVACAO' %}selected{% endif %}>Aprovação</option><option value="CHECKLIST" {% if selected_issue_type=='CHECKLIST' %}selected{% endif %}>Checklist</option></select></div>
+    <div class="col-12 d-flex gap-2"><button class="btn btn-primary">Aplicar filtros</button><a class="btn btn-outline-secondary" href="{{ url_for('issue_center') }}">Limpar</a></div>
+  </form>
+</div>
+
+<div class="cs-card table-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead><tr><th>Projeto</th><th>Escola</th><th>Disciplina</th><th>Responsável</th><th>Status</th><th>Pendência</th><th>Revisão</th><th>Aprovação</th><th>Checklist</th><th>Alertas</th><th>Ações</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><div class="fw-semibold">{{ row.project.project_name }}</div><div class="small text-muted">{{ row.project.master.name if row.project.master else 'Sem projeto mestre' }}</div></td>
+          <td>{{ row.project.school.name }}</td>
+          <td>{{ row.project.discipline.name }}</td>
+          <td>{{ row.project.assigned_user.name if row.project.assigned_user else '-' }}</td>
+          <td>{{ status_badge(row.project.operational_status) }}</td>
+          <td>{% if row.has_pending %}<div class="small">{{ row.project.pending }}</div>{% else %}-{% endif %}</td>
+          <td>{% if row.has_revision %}<div class="small">{{ row.project.revision }}</div>{% else %}-{% endif %}</td>
+          <td>{% if row.has_approval %}<div class="small">{{ row.project.approved }}</div>{% else %}-{% endif %}</td>
+          <td>
+            {% if row.has_checklist %}
+              <div class="d-flex flex-column gap-2">
+                <div class="d-flex flex-wrap gap-2">
+                  <span class="status-badge badge-primary">{{ row.checklist_count }} item(ns)</span>
+                  {% if row.checklist_overdue_count %}
+                    <span class="status-badge badge-danger">{{ row.checklist_overdue_count }} atrasado(s)</span>
+                  {% endif %}
+                </div>
+                {% for item in row.checklist_items %}
+                  {% set sla = get_checklist_sla(item) %}
+                  <div class="small">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                      <strong>{{ item.title }}</strong>
+                      <span class="status-badge {{ sla.class }}">{{ sla.label }}</span>
+                    </div>
+                    {% if item.assigned_user %}<div class="text-muted">Responsável: {{ item.assigned_user.name }}</div>{% endif %}
+                    {% if item.due_date %}<div class="text-muted">Prazo: {{ item.due_date|date_br }}</div>{% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td><div class="d-flex flex-wrap gap-2">{% for alert in row.alerts %}<span class="status-badge {{ alert.class }}">{{ alert.label }}</span>{% else %}<span class="small text-muted">Sem alerta</span>{% endfor %}</div></td>
+          <td><div class="action-stack"><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('project_detail', project_id=row.project.id) }}">Abrir</a></div></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="11" class="list-empty">Nenhum projeto com pendência, revisão, aprovação ou checklist no filtro atual.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

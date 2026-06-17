@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login - {{ APP_NAME }}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+:root{--cs-primary:#4A90E2;--cs-secondary:#764ba2;--cs-text:#2d3748;--cs-muted:#718096;--cs-border:#e2e8f0}
+*{box-sizing:border-box} body{min-height:100vh;margin:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f5f7fa 0%,#eef2f7 100%);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:var(--cs-text)}
+.login-shell{width:min(1040px,94vw);display:grid;grid-template-columns:1.05fr .95fr;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 24px 60px rgba(45,55,72,.12);border:1px solid rgba(226,232,240,.9)}
+.login-hero{padding:3rem;background:linear-gradient(135deg,#f8fbff 0%,#eef5ff 50%,#f6f0ff 100%);border-right:1px solid var(--cs-border);display:flex;flex-direction:column;justify-content:center}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:#fff;border:1px solid var(--cs-border);border-radius:999px;padding:.45rem .8rem;font-size:.78rem;color:var(--cs-primary);font-weight:700;width:max-content;margin-bottom:1.25rem}
+.hero-title{font-size:2.15rem;line-height:1.05;font-weight:800;letter-spacing:-.06em;margin-bottom:1rem}
+.hero-text{color:var(--cs-muted);font-size:1rem;max-width:32rem;margin-bottom:2rem}
+.hero-list{display:grid;gap:.85rem}.hero-item{background:#fff;border:1px solid var(--cs-border);border-radius:16px;padding:1rem 1rem 1rem 1.1rem}.hero-item-title{font-size:.9rem;font-weight:700;margin-bottom:.2rem}.hero-item-text{font-size:.88rem;color:var(--cs-muted)}
+.login-panel{padding:3rem;display:flex;flex-direction:column;justify-content:center}
+.brand{font-size:1.6rem;font-weight:800;letter-spacing:-.05em;color:var(--cs-primary);margin-bottom:.35rem}.brand-sub{color:var(--cs-muted);margin-bottom:1.8rem}
+.form-label{font-size:.76rem;color:var(--cs-muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}.form-control{padding:.95rem 1rem;border:2px solid var(--cs-border);border-radius:14px;font-weight:500}.form-control:focus{border-color:var(--cs-primary);box-shadow:0 0 0 .2rem rgba(74,144,226,.12)}
+.btn-primary{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border:none;border-radius:14px;padding:.95rem 1rem;font-weight:700;box-shadow:0 10px 24px rgba(102,126,234,.24)}
+.helper{font-size:.88rem;color:var(--cs-muted);margin-top:1rem}.alert{border:none;border-radius:14px}
+@media (max-width:860px){.login-shell{grid-template-columns:1fr}.login-hero{display:none}.login-panel{padding:2rem}}
+</style>
+</head>
+<body>
+  <div class="login-shell">
+    <section class="login-hero">
+      <div class="hero-badge">Gestão interna • C&S Arquitetura</div>
+      <h1 class="hero-title">Controle operacional, financeiro e documental dos  projetos.</h1>
+      <p class="hero-text">Acesse o ambiente central da operação para acompanhar os projetos.</p>
+      <div class="hero-list">
+        <div class="hero-item"><div class="hero-item-title">Projetos </div><div class="hero-item-text">Acompanhamento consolidado com disciplinas, categorias ALL/PAS e PRIVADO, anexos e comentários internos.</div></div>
+        <div class="hero-item"><div class="hero-item-title">Financeiro </div><div class="hero-item-text">Visão segmentada para Admin, Gestão e Projetista, sem vazamento de dados globais.</div></div>
+        <div class="hero-item"><div class="hero-item-title">Rastreabilidade</div><div class="hero-item-text">Histórico, auditoria e documentação centralizada para reduzir dependência de pastas e WhatsApp.</div></div>
+      </div>
+    </section>
+    <section class="login-panel">
+      <div class="brand">{{ APP_NAME }}</div>
+      <div class="brand-sub">Entre com seu usuário e senha para acessar o painel.</div>
+      {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}{% endif %}{% endwith %}
+      <form method="post" class="vstack gap-3">
+        <div><label class="form-label">E-mail</label><input class="form-control" type="email" name="email" required autofocus placeholder="Seu e-mail"></div>
+        <div><label class="form-label">Senha</label><input class="form-control" type="password" name="password" required placeholder="Sua senha"></div>
+        <button class="btn btn-primary w-100">Entrar no sistema</button>
+      </form>
+      <div class="helper">Use suas credenciais de acesso .</div>
+    </section>
+  </div>
+</body>
+</html>

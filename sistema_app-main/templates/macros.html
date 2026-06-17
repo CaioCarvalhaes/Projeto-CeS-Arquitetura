@@ -1,0 +1,28 @@
+{% macro status_badge(value, kind='operational') -%}
+  {% set cls = 'badge-neutral' %}
+  {% if kind == 'payment' %}
+    {% if value == 'PAGO' %}{% set cls='badge-success' %}
+    {% elif value == 'PARCIAL' %}{% set cls='badge-primary' %}
+    {% elif value == 'ATRASADO' %}{% set cls='badge-danger' %}
+    {% elif value in ['EM ABERTO', 'PENDENTE'] %}{% set cls='badge-warning' %}
+    {% endif %}
+  {% else %}
+    {% if value in ['APROVADO','ENTREGUE','CONCLUÍDO'] %}{% set cls='badge-success' %}
+    {% elif value in ['EM ANDAMENTO'] %}{% set cls='badge-primary' %}
+    {% elif value in ['EM REVISÃO','REVISÃO'] %}{% set cls='badge-purple' %}
+    {% elif value in ['AGUARDANDO INÍCIO','PENDENTE'] %}{% set cls='badge-warning' %}
+    {% elif value in ['ATRASADO'] %}{% set cls='badge-danger' %}
+    {% endif %}
+  {% endif %}
+  <span class="status-badge {{ cls }}">{{ value }}</span>
+{%- endmacro %}
+
+
+{% macro category_badge(value) -%}
+  {% set category = (value or 'ALL/PAS')|upper %}
+  {% if category == 'PRIVADO' %}
+    <span class="status-badge badge-danger">PRIVADO</span>
+  {% else %}
+    <span class="status-badge badge-primary">ALL/PAS</span>
+  {% endif %}
+{%- endmacro %}

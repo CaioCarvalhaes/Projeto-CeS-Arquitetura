@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="cs-card p-4">
+      <h1 class="page-title">{{ 'Editar Regra' if edit_rule else 'Nova Regra' }}</h1>
+      <p class="page-subtitle">Parâmetros financeiros por disciplina e por m².</p>
+
+      <div class="soft-card p-3 mb-4">
+        <div class="section-title mb-2">Regra aplicada pelo sistema</div>
+        <div class="small text-muted">
+          O lucro por m² é sempre residual. Ao salvar, o sistema recalcula:
+          nota total - Giulia - projetista.
+        </div>
+      </div>
+
+      <form method="post" class="vstack gap-3">
+        <input type="hidden" name="rule_id" value="{{ edit_rule.id if edit_rule else '' }}">
+
+        <div>
+          <label class="form-label">Disciplina</label>
+          <select class="form-select" name="discipline_id" required>
+            {% for d in disciplines %}
+            <option value="{{ d.id }}" {% if edit_rule and edit_rule.discipline_id==d.id %}selected{% endif %}>{{ d.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Nota total / m²</label>
+            <input class="form-control js-money" name="total_invoice_per_m2" value="{{ edit_rule.total_invoice_per_m2 if edit_rule else '' }}" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Lucro residual / m²</label>
+            <input class="form-control js-money" name="max_profit_per_m2" value="{{ edit_rule.max_profit_per_m2 if edit_rule else '' }}" required>
+            <div class="form-text">Campo mantido para compatibilidade. O valor final é ajustado automaticamente ao salvar.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Giulia executando / m²</label>
+            <input class="form-control js-money" name="giulia_solo_per_m2" value="{{ edit_rule.giulia_solo_per_m2 if edit_rule else '' }}" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Projetista / m²</label>
+            <input class="form-control js-money" name="designer_per_m2" value="{{ edit_rule.designer_per_m2 if edit_rule else '' }}" required>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Giulia quando projetista executa / m²</label>
+            <input class="form-control js-money" name="giulia_when_designer_per_m2" value="{{ edit_rule.giulia_when_designer_per_m2 if edit_rule else '' }}" required>
+          </div>
+        </div>
+
+        <div class="soft-card p-3">
+          <div class="section-title mb-3">Preview automático</div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="kv-item h-100">
+                <div class="kv-label">Lucro / m² com Giulia executando</div>
+                <div class="kv-value" id="preview-profit-giulia">
+                  {{ derive_rule_profit_per_m2(edit_rule.total_invoice_per_m2, edit_rule.giulia_solo_per_m2, 0) | brl if edit_rule else 'R$ 0,00' }}
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="kv-item h-100">
+                <div class="kv-label">Lucro / m² com projetista executando</div>
+                <div class="kv-value" id="preview-profit-designer">
+                  {{ derive_rule_profit_per_m2(edit_rule.total_invoice_per_m2, edit_rule.giulia_when_designer_per_m2, edit_rule.designer_per_m2) | brl if edit_rule else 'R$ 0,00' }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% if edit_rule %}
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" value="1" name="active" id="active" {% if edit_rule.active %}checked{% endif %}>
+          <label class="form-check-label" for="active">Regra ativa</label>
+        </div>
+        {% endif %}
+
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary">Salvar</button>
+          {% if edit_rule %}<a class="btn btn-outline-secondary" href="{{ url_for('pricing') }}">Cancelar</a>{% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="cs-card table-card">
+      <div class="p-4 pb-0">
+        <div class="section-title mb-0">Tabela de Valores</div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Disciplina</th>
+              <th>Nota / m²</th>
+              <th>Lucro com Giulia</th>
+              <th>Lucro com projetista</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for rule in rules %}
+            <tr>
+              <td>
+                <div class="fw-semibold">{{ rule.discipline.name }}</div>
+                <div class="small text-muted">Giulia: {{ rule.giulia_solo_per_m2|brl }} • Projetista: {{ rule.designer_per_m2|brl }}</div>
+              </td>
+              <td>{{ rule.total_invoice_per_m2|brl }}</td>
+              <td>{{ derive_rule_profit_per_m2(rule.total_invoice_per_m2, rule.giulia_solo_per_m2, 0)|brl }}</td>
+              <td>{{ derive_rule_profit_per_m2(rule.total_invoice_per_m2, rule.giulia_when_designer_per_m2, rule.designer_per_m2)|brl }}</td>
+              <td><span class="status-badge {{ 'badge-success' if rule.active else 'badge-neutral' }}">{{ 'Ativa' if rule.active else 'Inativa' }}</span></td>
+              <td>
+                <div class="action-stack">
+                  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('pricing', edit=rule.id) }}">Editar</a>
+                  <form method="post" action="{{ url_for('pricing_toggle_active', rule_id=rule.id) }}">
+                    <button class="btn btn-outline-warning btn-sm">{{ 'Inativar' if rule.active else 'Reativar' }}</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="list-empty">Nenhuma regra cadastrada.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  function parseMoney(value) {
+    if (!value) return 0;
+    return Number(String(value).replace(/\./g, '').replace(',', '.')) || 0;
+  }
+
+  function formatBrl(value) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+  }
+
+  function updatePreview() {
+    const total = parseMoney(document.querySelector('input[name="total_invoice_per_m2"]')?.value);
+    const giuliaSolo = parseMoney(document.querySelector('input[name="giulia_solo_per_m2"]')?.value);
+    const designer = parseMoney(document.querySelector('input[name="designer_per_m2"]')?.value);
+    const giuliaWhenDesigner = parseMoney(document.querySelector('input[name="giulia_when_designer_per_m2"]')?.value);
+
+    const profitGiulia = total - giuliaSolo;
+    const profitDesigner = total - giuliaWhenDesigner - designer;
+
+    const giuliaNode = document.getElementById('preview-profit-giulia');
+    const designerNode = document.getElementById('preview-profit-designer');
+    if (giuliaNode) giuliaNode.textContent = formatBrl(profitGiulia);
+    if (designerNode) designerNode.textContent = formatBrl(profitDesigner);
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.js-money').forEach(function (input) {
+      input.addEventListener('input', updatePreview);
+    });
+    updatePreview();
+  });
+})();
+</script>
+{% endblock %}

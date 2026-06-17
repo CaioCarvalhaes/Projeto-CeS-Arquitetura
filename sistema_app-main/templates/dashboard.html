@@ -1,0 +1,130 @@
+{% extends 'base.html' %}{% from 'macros.html' import status_badge, category_badge %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+  <div>
+    <h1 class="page-title">Meu Dashboard</h1>
+    <p class="page-subtitle">Resumo operacional e financeiro conforme as permissões do seu usuário.</p>
+  </div>
+  <form class="filters-bar" method="get">
+    <div class="filter-box"><label>Competência</label><select class="form-select" name="competence">{% for c in COMPETENCE_TYPES %}<option value="{{ c }}" {% if selected_competence==c %}selected{% endif %}>{{ COMPETENCE_LABELS[c] }}</option>{% endfor %}</select></div>
+    <div class="filter-box"><label>Mês</label><input class="form-control" type="month" name="month" value="{{ selected_month }}"></div>
+    <button class="btn btn-primary">Aplicar</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('my_financial_overview') }}">Meu Financeiro</a>
+    {% if can_see_global_financial_data(g.user) %}<a class="btn btn-outline-secondary" href="{{ url_for('financial_overview') }}">Fechamento Financeiro</a>{% endif %}
+    {% if g.user.can_create_new_projects() %}<a class="btn btn-primary" href="{{ url_for('project_new') }}">Novo Projeto</a>{% endif %}
+  </form>
+</div>
+<div class="row g-4 mb-4">
+  <div class="col-sm-6 col-xl-3"><div class="cs-card metric-card blue"><div class="metric-label">Projetos visíveis</div><div class="metric-value">{{ total_projects }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="cs-card metric-card green"><div class="metric-label">Em aberto</div><div class="metric-value">{{ open_projects }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="cs-card metric-card orange"><div class="metric-label">Pagamentos pendentes</div><div class="metric-value">{{ pending_payments }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="cs-card metric-card purple"><div class="metric-label">Meu valor vinculado</div><div class="metric-value">{{ user_project_value_total|brl }}</div><div class="metric-subtitle">{{ user_projects_with_value }} projeto(s) com valor vinculado</div></div></div>
+</div>
+<div class="row g-4 mb-4">
+  <div class="col-sm-6 col-xl-3"><div class="soft-card p-4"><div class="metric-label">Projetos na competência</div><div class="metric-value">{{ monthly_totals.projects }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="soft-card p-4"><div class="metric-label">Pagos</div><div class="metric-value">{{ monthly_totals.paid_projects }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="soft-card p-4"><div class="metric-label">Pendentes</div><div class="metric-value">{{ monthly_totals.pending_projects }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="soft-card p-4"><div class="metric-label">Atrasados</div><div class="metric-value">{{ monthly_totals.overdue_projects }}</div></div></div>
+</div>
+{% if can_view_global_financial %}<div class="row g-4 mb-4">
+  <div class="col-md-6 col-xl-4"><div class="cs-card metric-card blue"><div class="metric-label">Faturamento do mês</div><div class="metric-value">{{ monthly_totals.invoice|brl }}</div></div></div>
+  <div class="col-md-6 col-xl-4"><div class="cs-card metric-card green"><div class="metric-label">Valor Giulia</div><div class="metric-value">{{ monthly_totals.giulia|brl }}</div><div class="metric-subtitle">Somente projetos ALL/PAS</div></div></div>
+  <div class="col-md-6 col-xl-4"><div class="cs-card metric-card purple"><div class="metric-label">Valor Projetistas</div><div class="metric-value">{{ monthly_totals.designer|brl }}</div><div class="metric-subtitle">Somente projetos ALL/PAS</div></div></div>
+</div>
+<div class="row g-4 mb-4">
+  <div class="col-md-6 col-xl-4"><div class="cs-card metric-card orange"><div class="metric-label">Lucro Maxsuel</div><div class="metric-value">{{ monthly_totals.profit|brl }}</div><div class="metric-subtitle">Somente projetos ALL/PAS</div></div></div>
+  <div class="col-md-6 col-xl-4"><div class="cs-card metric-card blue"><div class="metric-label">Lucro Empresa</div><div class="metric-value">{{ monthly_totals.company|brl }}</div><div class="metric-subtitle">Projetos PRIVADO</div></div></div>
+  <div class="col-md-6 col-xl-4"><div class="soft-card p-4 h-100"><div class="metric-label">Ticket médio</div><div class="metric-value">{{ monthly_totals.average_ticket|brl }}</div><div class="metric-subtitle">Média por projeto no período</div></div></div>
+</div>
+<div class="row g-4 mb-4">
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card blue"><div class="metric-label">Custos fixos</div><div class="metric-value">{{ cost_summary.fixed_total|brl }}</div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card purple"><div class="metric-label">Custos variáveis</div><div class="metric-value">{{ cost_summary.variable_total|brl }}</div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card orange"><div class="metric-label">Impostos</div><div class="metric-value">{{ cost_summary.tax_total|brl }}</div><div class="metric-subtitle">6% automático + impostos manuais</div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card green"><div class="metric-label">Resultado líquido</div><div class="metric-value">{{ cost_summary.net_result|brl }}</div><div class="metric-subtitle">Faturamento menos custos</div></div></div>
+</div>{% else %}<div class="row g-4 mb-4">
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card blue"><div class="metric-label">Meu total no mês</div><div class="metric-value">{{ personal_monthly_total|brl }}</div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card green"><div class="metric-label">Meu total pago</div><div class="metric-value">{{ personal_paid_total|brl }}</div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card orange"><div class="metric-label">Meu total pendente</div><div class="metric-value">{{ personal_pending_total|brl }}</div></div></div>
+  <div class="col-md-6 col-xl-3"><div class="cs-card metric-card purple"><div class="metric-label">Meu total atrasado</div><div class="metric-value">{{ personal_overdue_total|brl }}</div></div></div>
+</div>{% endif %}
+<div class="row g-4">
+  <div class="col-xl-7">
+    <div class="cs-card table-card">
+      <div class="p-4 pb-0"><div class="section-title mb-0">Últimos projetos visíveis</div></div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead><tr><th>Projeto</th><th>Categoria</th><th>Escola</th><th>Status</th><th>Responsável interno</th><th>Meu valor</th><th>Ações</th></tr></thead>
+          <tbody>
+            {% for project, my_value in latest_projects_with_values %}
+            <tr>
+              <td><div class="fw-semibold">{{ project.project_name }}</div><div class="small text-muted">{{ project.discipline.name }}</div></td>
+              <td>{{ category_badge(project.project_category) }}</td>
+              <td>{{ project.school.name }}</td>
+              <td>{{ status_badge(project.operational_status) }}<div class="mt-2">{{ status_badge(project.payment_status, 'payment') }}</div></td>
+              <td>{{ project.assigned_user.name if project.assigned_user else '-' }}</td>
+              <td>{{ my_value|brl }}</td>
+              <td><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('project_detail', project_id=project.id) }}">Abrir</a></td>
+            </tr>
+            {% else %}<tr><td colspan="7" class="list-empty">Nenhum projeto visível.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-5">
+    {% if can_view_global_financial %}
+    <div class="soft-card p-4">
+      <div class="section-title">Indicadores operacionais</div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Projetos atrasados</span><strong>{{ executive.late_projects }}</strong></div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Prazos em até 7 dias</span><strong>{{ executive.upcoming_projects }}</strong></div>
+      <div class="d-flex justify-content-between py-2"><span>Projetos com meu valor</span><strong>{{ user_projects_with_value }}</strong></div>
+    </div>
+
+    <div class="cs-card table-card mt-4">
+      <div class="p-4 pb-0"><div class="section-title mb-0">Projetos críticos</div></div>
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle">
+          <thead><tr><th>Projeto</th><th>Escola</th><th>Alertas</th><th>Ação</th></tr></thead>
+          <tbody>
+            {% for row in critical_projects %}
+            <tr>
+              <td><div class="fw-semibold">{{ row.project.project_name }}</div><div class="small text-muted">{{ row.project.discipline.name }}</div></td>
+              <td>{{ row.project.school.name }}</td>
+              <td><div class="d-flex flex-wrap gap-2">{% for alert in row.alerts %}<span class="status-badge {{ alert.class }}">{{ alert.label }}</span>{% endfor %}</div></td>
+              <td><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('project_detail', project_id=row.project.id) }}">Abrir</a></td>
+            </tr>
+            {% else %}<tr><td colspan="4" class="list-empty">Nenhum projeto crítico no período.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div class="soft-card p-4 mt-4">
+      <div class="section-title">Resumo de custos</div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Custos fixos</span><strong>{{ cost_summary.fixed_total|brl }}</strong></div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Custos variáveis</span><strong>{{ cost_summary.variable_total|brl }}</strong></div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Imposto automático (6%)</span><strong>{{ cost_summary.automatic_tax_total|brl }}</strong></div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Impostos manuais</span><strong>{{ cost_summary.manual_tax_total|brl }}</strong></div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Total de impostos</span><strong>{{ cost_summary.tax_total|brl }}</strong></div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Total de custos</span><strong>{{ cost_summary.total_costs|brl }}</strong></div>
+      <div class="d-flex justify-content-between py-2"><span>Resultado líquido</span><strong>{{ cost_summary.net_result|brl }}</strong></div>
+      <div class="small text-muted mt-3">Os lançamentos manuais e o imposto automático do período são consolidados no módulo de custos.</div>
+    </div>
+    {% else %}
+    
+    <div class="cs-card table-card mb-4">
+      <div class="p-4 pb-0"><div class="section-title mb-0">Resumo por categoria</div></div>
+      <div class="table-responsive"><table class="table table-hover table-sm"><thead><tr><th>Categoria</th><th>Projetos</th><th>{% if can_view_global_financial %}Nota total{% else %}Meu valor{% endif %}</th></tr></thead><tbody>{% for row in category_summary %}<tr><td>{{ category_badge(row.label) }}</td><td>{{ row.projects }}</td><td>{% if can_view_global_financial %}<div>{{ row.invoice|brl }}</div><div class="small text-muted">Lucro Empresa: {{ row.company|brl }}</div>{% else %}{{ row.my_value|brl }}{% endif %}</td></tr>{% else %}<tr><td colspan="3" class="list-empty">Sem dados.</td></tr>{% endfor %}</tbody></table></div>
+    </div>
+
+    <div class="soft-card p-4">
+      <div class="section-title">Resumo do meu financeiro</div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Meu valor no mês</span><strong>{{ personal_monthly_total|brl }}</strong></div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Meu valor pago</span><strong>{{ personal_paid_total|brl }}</strong></div>
+      <div class="d-flex justify-content-between py-2 border-bottom"><span>Meu valor pendente</span><strong>{{ personal_pending_total|brl }}</strong></div>
+      <div class="d-flex justify-content-between py-2"><span>Meu valor atrasado</span><strong>{{ personal_overdue_total|brl }}</strong></div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
